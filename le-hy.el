@@ -83,6 +83,53 @@
         "(ok)"
       res)))
 
+(defun lispy--hy-describe (sym)
+  "Describe sym."
+  (let ((func (lispy--current-function)))
+    (replace-regexp-in-string
+     "\\\\\\n" "\n"
+     (substring
+      (lispy--eval-hy
+       (format "(? \"%s\")" func)
+       ;; (format "(let [flds (hylp-info \"%s\")]
+       ;;      (.format \"Usage: {0}
+
+       ;; {1}
+
+       ;; [[{2}::{3}]]
+
+       ;; \" (get flds 0) (get flds 1) (get flds 2) (get flds 3)))" sym)
+       )
+      2 -1))))
+
+(defun lispy--hy-args (sym)
+  "Args for sym."
+  (propertize
+   (substring
+    (lispy--eval-hy
+     (format "(hyldoc \"%s\")" (lispy--current-function))
+     ;; (format "(string
+     ;; (try
+     ;;  (get (hylp-info \"%s\") 0)
+     ;;  (except [e Exception]
+     ;;    \"\")))" sym)
+     )
+    2 -1)
+   'font-lock-face '(:foreground "black" :background "Lightgoldenrod1")))
+
+
+(defun lispy-goto-symbol-hy (&optional sym)
+  "Jump to the SYM (if none is provided use `symbol-at-point'."
+  (interactive (list (or (thing-at-point 'symbol t)
+                         (lispy--current-function))))
+  (org-open-link-from-string
+   (substring
+    (lispy--eval-hy (format
+                     "(hyspy-file-lineno \"%s\")"
+                     (or sym (symbol-at-point))))
+    2 -1)))
+
+
 (provide 'le-hy)
 
 ;;; le-hy.el ends here

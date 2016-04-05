@@ -144,6 +144,11 @@ The caller of `lispy--show' might use a substitute e.g. `describe-function'."
              (setq lispy-hint-pos (point))
              (lispy--show (lispy--lisp-args (lispy--current-function))))
 
+            ((eq major-mode 'hy-mode)
+             (require 'le-hy)
+             (setq lispy-hint-pos (point))
+             (lispy--show (lispy--hy-args (lispy--current-function))))
+
             (t (error "%s isn't supported currently" major-mode))))))
 
 (defun lispy--delete-help-windows ()
@@ -188,59 +193,62 @@ Return t if at least one was deleted."
           (setq lispy-hint-pos (point))
           (let* ((doc
                   (cond
-                    ((memq major-mode lispy-elisp-modes)
-                     (let (dc)
-                       (setq sym (intern-soft sym))
-                       (cond ((fboundp sym)
-                              (if (lispy--show-fits-p
-                                   (setq dc (or (documentation sym)
-                                                "undocumented")))
-                                  dc
-                                (setq lispy--di-window-config (current-window-configuration))
-                                (goto-char pt)
-                                (save-selected-window
+                   ((memq major-mode lispy-elisp-modes)
+                    (let (dc)
+                      (setq sym (intern-soft sym))
+                      (cond ((fboundp sym)
+                             (if (lispy--show-fits-p
+                                  (setq dc (or (documentation sym)
+                                               "undocumented")))
+                                 dc
+                               (setq lispy--di-window-config (current-window-configuration))
+                               (goto-char pt)
+                               (save-selected-window
                                  (describe-function sym))
-                                nil))
-                             ((boundp sym)
-                              (if (lispy--show-fits-p
-                                   (setq dc (or (documentation-property
-                                                 sym 'variable-documentation)
-                                                "undocumented")))
-                                  dc
-                                (setq lispy--di-window-config (current-window-configuration))
-                                (goto-char pt)
-                                (save-selected-window
-                                  (describe-variable sym))
-                                nil))
-                             (t "unbound"))))
-                    ((or (memq major-mode lispy-clojure-modes)
-                         (memq major-mode '(cider-repl-mode)))
-                     (require 'le-clojure)
-                     (let ((rsymbol (lispy--clojure-resolve sym)))
-                       (string-trim-left
-                        (replace-regexp-in-string
-                         "^\\(?:-+\n\\|\n*.*$.*@.*\n*\\)" ""
-                         (cond ((stringp rsymbol)
-                                (read
-                                 (lispy--eval-clojure
-                                  (format "(with-out-str (clojure.repl/doc %s))" rsymbol))))
-                               ((eq rsymbol 'special)
-                                (read
-                                 (lispy--eval-clojure
-                                  (format "(with-out-str (clojure.repl/doc %s))" sym))))
-                               ((eq rsymbol 'keyword)
-                                "No docs for keywords")
-                               ((and (listp rsymbol)
-                                     (eq (car rsymbol) 'variable))
-                                (cadr rsymbol))
-                               (t
-                                (or (lispy--describe-clojure-java sym)
-                                    (format "Could't resolve '%s" sym))))))))
-                    ((eq major-mode 'lisp-mode)
-                     (require 'le-lisp)
-                     (lispy--lisp-describe sym))
-                    (t
-                     (format "%s isn't supported currently" major-mode)))))
+                               nil))
+                            ((boundp sym)
+                             (if (lispy--show-fits-p
+                                  (setq dc (or (documentation-property
+                                                sym 'variable-documentation)
+                                               "undocumented")))
+                                 dc
+                               (setq lispy--di-window-config (current-window-configuration))
+                               (goto-char pt)
+                               (save-selected-window
+                                 (describe-variable sym))
+                               nil))
+                            (t "unbound"))))
+                   ((or (memq major-mode lispy-clojure-modes)
+                        (memq major-mode '(cider-repl-mode)))
+                    (require 'le-clojure)
+                    (let ((rsymbol (lispy--clojure-resolve sym)))
+                      (string-trim-left
+                       (replace-regexp-in-string
+                        "^\\(?:-+\n\\|\n*.*$.*@.*\n*\\)" ""
+                        (cond ((stringp rsymbol)
+                               (read
+                                (lispy--eval-clojure
+                                 (format "(with-out-str (clojure.repl/doc %s))" rsymbol))))
+                              ((eq rsymbol 'special)
+                               (read
+                                (lispy--eval-clojure
+                                 (format "(with-out-str (clojure.repl/doc %s))" sym))))
+                              ((eq rsymbol 'keyword)
+                               "No docs for keywords")
+                              ((and (listp rsymbol)
+                                    (eq (car rsymbol) 'variable))
+                               (cadr rsymbol))
+                              (t
+                               (or (lispy--describe-clojure-java sym)
+                                   (format "Could't resolve '%s" sym))))))))
+                   ((eq major-mode 'lisp-mode)
+                    (require 'le-lisp)
+                    (lispy--lisp-describe sym))
+                   ((eq major-mode 'hy-mode)
+                    (require 'le-hy)
+                    (lispy--hy-describe sym))
+                   (t
+                    (format "%s isn't supported currently" major-mode)))))
             (when doc
               (lispy--show (propertize doc 'face 'lispy-face-hint)))))))))
 
