@@ -83,24 +83,43 @@
         "(ok)"
       res)))
 
+(defvar lispy-hy-link nil
+  "global var to hold a link to open in `lispy_hy-describe'.")
+
 (defun lispy--hy-describe (sym)
-  "Describe sym."
-  (let ((func (lispy--current-function)))
-    (replace-regexp-in-string
-     "\\\\\\n" "\n"
-     (substring
-      (lispy--eval-hy
-       (format "(? \"%s\")" func)
-       ;; (format "(let [flds (hylp-info \"%s\")]
-       ;;      (.format \"Usage: {0}
+  "Describe sym with usage, doc and clickable link."
+  (let* ((func (lispy--current-function))
+         (map (make-sparse-keymap))
+         (s (replace-regexp-in-string
+             "\\\\\\n" "\n"
+             (substring
+              (lispy--eval-hy
+               (format "(? \"%s\")" func)
+               ;; (format "(let [flds (hylp-info \"%s\")]
+               ;;      (.format \"Usage: {0}
 
-       ;; {1}
+               ;; {1}
 
-       ;; [[{2}::{3}]]
+               ;; [[{2}::{3}]]
 
-       ;; \" (get flds 0) (get flds 1) (get flds 2) (get flds 3)))" sym)
-       )
-      2 -1))))
+               ;; \" (get flds 0) (get flds 1) (get flds 2) (get flds 3)))" sym)
+               )
+              2 -1))))
+
+    (define-key map [mouse-1]
+      (lambda ()
+        (interactive)
+        (org-open-link-from-string lispy-hy-link)))
+
+    (string-match "\\[\\[.*\\]\\]" s)
+    (setq lispy-hy-link (match-string 0 s))
+    (set-text-properties (match-beginning 0)
+                         (match-end 0)
+                         `(local-map ,map
+                                     mouse-face 'highlight
+                                     help-echo "mouse-1: click me")
+                         s)
+    s))
 
 (defun lispy--hy-args (sym)
   "Args for sym."
